@@ -156,7 +156,7 @@ const NEXT: Record<DayId, DayId> = { A: "B", B: "C", C: "A" };
 
 export function nextDay(sessions: { day: DayId; completedAt?: string }[]): DayId {
   const done = sessions.filter((s) => s.completedAt);
-  if (done.length === 0) return "A";
+  if (done.length === 0) return "B";
   return NEXT[done[done.length - 1].day];
 }
 
