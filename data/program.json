@@ -1,0 +1,256 @@
+{
+  "cycle": 1,
+  "warmup": {
+    "bikeMin": 5,
+    "hyper": "2×15"
+  },
+  "days": {
+    "A": {
+      "ramp": {
+        "exerciseId": "squat",
+        "sets": [
+          { "reps": 8, "weightKg": 30 },
+          { "reps": 5, "weightKg": 45 }
+        ],
+        "restSec": 60
+      },
+      "exercises": [
+        {
+          "id": "squat",
+          "name": "Присед со штангой",
+          "sets": 3,
+          "repsMin": 6,
+          "repsMax": 8,
+          "weightKg": 60,
+          "rir": "2",
+          "restSec": 180,
+          "incrementKg": 5
+        },
+        {
+          "id": "incline",
+          "name": "Жим в наклоне в тренажёре",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "weightKg": 40,
+          "rir": "2",
+          "restSec": 120,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "hammers",
+          "name": "Молотки с опорой спиной",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 12,
+          "weightKg": 12.5,
+          "rir": "2",
+          "restSec": 75,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "pulldownWide",
+          "name": "Верхний блок, широкая параллель",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "weightKg": 60,
+          "rir": "2",
+          "restSec": 120,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "ezOh",
+          "name": "Разгибание из-за головы сидя, EZ",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "weightKg": 20,
+          "rir": "2",
+          "restSec": 90,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "lateralsA",
+          "name": "Махи в стороны",
+          "sets": 4,
+          "repsMin": 12,
+          "repsMax": 15,
+          "weightKg": 6,
+          "rir": "1–2",
+          "restSec": 60,
+          "incrementKg": 2.5
+        }
+      ]
+    },
+    "B": {
+      "ramp": {
+        "exerciseId": "row",
+        "sets": [
+          { "reps": 8, "weightKg": 30 },
+          { "reps": 5, "weightKg": 40 }
+        ],
+        "restSec": 60
+      },
+      "exercises": [
+        {
+          "id": "row",
+          "name": "Тяга нижнего блока, узкий нейтральный",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "weightKg": 55,
+          "rir": "2",
+          "restSec": 120,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "seatedPress",
+          "name": "Жим сидя в тренажёре",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 12,
+          "weightKg": 55,
+          "rir": "2",
+          "restSec": 120,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "inclineCurl",
+          "name": "Сгибания на наклонной, ладони к себе",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 12,
+          "weightKg": 8,
+          "rir": "2",
+          "restSec": 75,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "legExt",
+          "name": "Разгибания ног",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 15,
+          "weightKg": 40,
+          "rir": "2",
+          "restSec": 75,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "pushdownB",
+          "name": "Трицепс вниз, прямая или канат",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "weightKg": 50,
+          "rir": "2",
+          "restSec": 75,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "lateralsB",
+          "name": "Махи в стороны",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "weightKg": 6,
+          "rir": "1–2",
+          "restSec": 60,
+          "incrementKg": 2.5
+        }
+      ]
+    },
+    "C": {
+      "ramp": {
+        "exerciseId": "hammer2",
+        "sets": [
+          { "reps": 8, "weightKg": 20 },
+          { "reps": 5, "weightKg": 30 }
+        ],
+        "restSec": 60
+      },
+      "exercises": [
+        {
+          "id": "hammer1",
+          "name": "Хаммер, 1 рука",
+          "sets": 3,
+          "repsMin": 8,
+          "repsMax": 10,
+          "weightKg": 45,
+          "rir": "1–2",
+          "restSec": 0,
+          "incrementKg": 2.5,
+          "clusterPair": "hammer2"
+        },
+        {
+          "id": "hammer2",
+          "name": "Хаммер, 2 руки широко",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 12,
+          "weightKg": 35,
+          "rir": "1–2",
+          "restSec": 120,
+          "incrementKg": 2.5,
+          "clusterAfterPair": true
+        },
+        {
+          "id": "pecDeck",
+          "name": "Бабочка",
+          "sets": 3,
+          "repsMin": 12,
+          "repsMax": 15,
+          "weightKg": 40,
+          "rir": "1–2",
+          "restSec": 60,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "pulldownV",
+          "name": "Верхний блок узкий нейтральный (V)",
+          "sets": 4,
+          "repsMin": 8,
+          "repsMax": 12,
+          "weightKg": 55,
+          "rir": "2",
+          "restSec": 120,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "legCurl",
+          "name": "Сгибания ног сидя, иначе лёжа",
+          "sets": 4,
+          "repsMin": 10,
+          "repsMax": 12,
+          "weightKg": 35,
+          "rir": "2",
+          "restSec": 75,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "pushdownC",
+          "name": "Трицепс вниз",
+          "sets": 3,
+          "repsMin": 10,
+          "repsMax": 15,
+          "weightKg": 50,
+          "rir": "2",
+          "restSec": 60,
+          "incrementKg": 2.5
+        },
+        {
+          "id": "lateralsC",
+          "name": "Махи в стороны",
+          "sets": 5,
+          "repsMin": 12,
+          "repsMax": 20,
+          "weightKg": 5,
+          "rir": "1",
+          "restSec": 45,
+          "incrementKg": 2.5
+        }
+      ]
+    }
+  }
+}
