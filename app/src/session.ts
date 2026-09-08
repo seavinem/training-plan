@@ -139,6 +139,30 @@ export function appendSet(
   return next;
 }
 
+export function dropLastSet(logs: ExerciseLog[], exerciseId: string): ExerciseLog[] {
+  return logs
+    .map((row) =>
+      row.id === exerciseId ? { ...row, sets: row.sets.slice(0, -1) } : { ...row, sets: [...row.sets] },
+    )
+    .filter((row) => row.sets.length > 0);
+}
+
+export function updateSet(
+  logs: ExerciseLog[],
+  exerciseId: string,
+  setIndex: number,
+  patch: Partial<ExerciseLog["sets"][number]>,
+): ExerciseLog[] {
+  return logs.map((row) =>
+    row.id !== exerciseId
+      ? row
+      : {
+          ...row,
+          sets: row.sets.map((set, index) => (index === setIndex ? { ...set, ...patch } : set)),
+        },
+  );
+}
+
 export function defaultsForSet(
   item: QueueSet,
   logs: ExerciseLog[],

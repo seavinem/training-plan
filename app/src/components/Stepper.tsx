@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Props = {
   label: string;
@@ -11,7 +11,24 @@ type Props = {
 
 export function Stepper({ label, value, step, min = 0, format, onChange }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
+  const repeatTimer = useRef<number | null>(null);
   const inputId = `stepper-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  const change = (direction: -1 | 1) =>
+    onChange(Math.max(min, round(value + direction * step)));
+  const stopRepeat = () => {
+    if (repeatTimer.current !== null) {
+      window.clearTimeout(repeatTimer.current);
+      repeatTimer.current = null;
+    }
+  };
+  const startRepeat = (direction: -1 | 1) => {
+    stopRepeat();
+    const repeat = () => {
+      change(direction);
+      repeatTimer.current = window.setTimeout(repeat, 90);
+    };
+    repeatTimer.current = window.setTimeout(repeat, 350);
+  };
 
   return (
     <div>
@@ -20,7 +37,11 @@ export function Stepper({ label, value, step, min = 0, format, onChange }: Props
         <button
           type="button"
           aria-label="Минус"
-          onClick={() => onChange(Math.max(min, round(value - step)))}
+          onClick={() => change(-1)}
+          onPointerDown={() => startRepeat(-1)}
+          onPointerUp={stopRepeat}
+          onPointerCancel={stopRepeat}
+          onPointerLeave={stopRepeat}
         >
           −
         </button>
@@ -28,6 +49,7 @@ export function Stepper({ label, value, step, min = 0, format, onChange }: Props
           id={inputId}
           className="value"
           inputMode="decimal"
+          enterKeyHint="done"
           value={draft ?? format(value)}
           onFocus={() => setDraft(format(value))}
           onBlur={() => {
@@ -38,8 +60,19 @@ export function Stepper({ label, value, step, min = 0, format, onChange }: Props
             setDraft(null);
           }}
           onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
+          }}
         />
-        <button type="button" aria-label="Плюс" onClick={() => onChange(round(value + step))}>
+        <button
+          type="button"
+          aria-label="Плюс"
+          onClick={() => change(1)}
+          onPointerDown={() => startRepeat(1)}
+          onPointerUp={stopRepeat}
+          onPointerCancel={stopRepeat}
+          onPointerLeave={stopRepeat}
+        >
           +
         </button>
       </div>

@@ -1,38 +1,49 @@
 import { useState } from "react";
+import { Banner } from "../components/Banner";
 
 type Props = {
   error?: string;
-  onSubmit: (pin: string) => void;
+  onSubmit: (pin: string) => Promise<void> | void;
 };
 
 export function Pin({ error, onSubmit }: Props) {
   const [pin, setPin] = useState("");
+  const [checking, setChecking] = useState(false);
 
   return (
-    <div className="shell stack">
+    <div className="shell stack pin-shell">
+      <div className="pin-mark">ЗАЛ</div>
       <h1>Код доступа</h1>
-      <p className="muted">Один раз. Дальше приложение само пишет отчёты и зовёт коуча.</p>
-      {error ? <div className="banner err">{error}</div> : null}
+      <p className="muted">Введи PIN один раз. Тренировка работает и без сети.</p>
+      {error ? <Banner tone="err">{error}</Banner> : null}
       <form
         className="stack"
-        onSubmit={(e) => {
-          e.preventDefault();
+        onSubmit={async (event) => {
+          event.preventDefault();
           const next = pin.trim();
-          if (next) onSubmit(next);
+          if (!next || checking) return;
+          setChecking(true);
+          try {
+            await onSubmit(next);
+          } finally {
+            setChecking(false);
+          }
         }}
       >
         <label className="field">
           <span>PIN</span>
           <input
             autoFocus
-            autoComplete="off"
+            autoComplete="one-time-code"
             inputMode="numeric"
+            pattern="[0-9]*"
+            enterKeyHint="go"
             value={pin}
-            onChange={(e) => setPin(e.target.value)}
+            onChange={(event) => setPin(event.target.value)}
           />
         </label>
-        <button type="submit" className="btn btn-primary" disabled={!pin.trim()}>
-          Войти
+        <button type="submit" className="btn btn-primary" disabled={!pin.trim() || checking}>
+          {checking ? "Проверяю…" : "Войти"}
         </button>
       </form>
     </div>

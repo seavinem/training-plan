@@ -222,6 +222,13 @@ export function markSent(sessions: Session[]): string[] {
   return next;
 }
 
+export function unmarkSent(sessions: Session[]): string[] {
+  const keys = new Set(sessions.map(sessionKey));
+  const next = loadSent().filter((key) => !keys.has(key));
+  localStorage.setItem(SENT, JSON.stringify(next));
+  return next;
+}
+
 export function unsyncedLogs(logs: Session[], sent: string[]): Session[] {
   return logs.filter((s) => s.completedAt && !sent.includes(sessionKey(s)));
 }

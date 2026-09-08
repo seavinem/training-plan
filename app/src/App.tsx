@@ -4,19 +4,31 @@ import {
   authenticate,
   BusyError,
   loadState,
+  netMessage,
   pollRun,
   report,
   startChat,
   workerConfigured,
 } from "./api";
+import { alertRestDone, primeRestAudio } from "./alerts";
+import { Banner } from "./components/Banner";
 import { Chat } from "./screens/Chat";
 import { Home } from "./screens/Home";
 import { Pin } from "./screens/Pin";
 import { Rest } from "./screens/Rest";
 import { Summary } from "./screens/Summary";
 import { Workout } from "./screens/Workout";
+import { useOnline } from "./hooks/useOnline";
+import { useViewHistory } from "./hooks/useViewHistory";
 import { suggestWeights, todayIso } from "./progression";
-import { appendSet, buildQueue, defaultsForSet, nextDay } from "./session";
+import {
+  appendSet,
+  buildQueue,
+  defaultsForSet,
+  dropLastSet,
+  nextDay,
+  updateSet,
+} from "./session";
 import {
   applyRemote,
   clearActiveRun,
@@ -46,6 +58,7 @@ import {
   savePin,
   savePendingRemote,
   saveWeights,
+  unmarkSent,
   unsyncedLogs,
 } from "./storage";
 import type {
@@ -60,6 +73,8 @@ import type {
   Weights,
 } from "./types";
 
+type Notice = { text: string; tone: "ok" | "err" | "info" };
+
 const SEND_FAIL = "Отчёт не ушёл — уйдёт, когда будет сеть.";
 const SEND_OK = "Отчёт ушёл";
 
@@ -73,7 +88,7 @@ export function App() {
   const [pickedDay, setPickedDay] = useState<DayId>(() => nextDay(loadLogs()));
   const [pin, setPin] = useState(loadPin);
   const [pinError, setPinError] = useState("");
-  const [status, setStatus] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
   const [sendState, setSendState] = useState<"idle" | "sending" | "ok" | "failed">("idle");
   const [messages, setMessages] = useState<ChatMessage[]>(loadChat);
@@ -87,11 +102,27 @@ export function App() {
   const lastDoneTap = useRef(0);
   const chatAbort = useRef<AbortController | null>(null);
   const activeRun = useRef<ActiveRun | null>(loadActiveRun());
+  const online = useOnline();
 
   const queue = useMemo(
     () => (draft ? buildQueue(draft.day, program, weights) : []),
     [draft, program, weights],
   );
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("gym-safe-update", {
+        detail: { safe: Boolean(pin) && view === "home" && !draft },
+      }),
+    );
+  }, [pin, view, draft]);
+
+  useViewHistory(view, () => {
+    if (view === "home") return;
+    chatAbort.current?.abort();
+    setChatBusy(false);
+    setView("home");
+  });
 
   useEffect(() => {
     if (view !== "workout" && view !== "rest") return;
@@ -108,12 +139,12 @@ export function App() {
         .catch(() => undefined);
     };
     grab();
-    const onVis = () => {
+    const onVisibility = () => {
       if (document.visibilityState === "visible") grab();
     };
-    document.addEventListener("visibilitychange", onVis);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      document.removeEventListener("visibilitychange", onVis);
+      document.removeEventListener("visibilitychange", onVisibility);
       void sentinel?.release();
     };
   }, [view]);
@@ -128,6 +159,7 @@ export function App() {
       if (Date.now() - endsAt > 60_000) {
         setRestExpired(true);
       } else {
+        alertRestDone();
         advanceRest();
       }
     }, Math.max(0, endsAt - Date.now()));
@@ -175,7 +207,14 @@ export function App() {
   }, [pin, view]);
 
   useEffect(() => {
-    if (view !== "chat" || chatBusy) return;
+    if (view !== "home" && view !== "chat") {
+      if (chatBusy) {
+        chatAbort.current?.abort();
+        setChatBusy(false);
+      }
+      return;
+    }
+    if (chatBusy) return;
     const run = activeRun.current;
     if (!run || Date.now() - run.startedAt > 15 * 60 * 1000) {
       if (run) {
@@ -184,8 +223,10 @@ export function App() {
       }
       return;
     }
+    const controller = new AbortController();
+    chatAbort.current = controller;
     setChatBusy(true);
-    void resumeRun(run);
+    void resumeRun(run, controller);
   }, [view]);
 
   function persist(next: DraftSession) {
@@ -200,7 +241,7 @@ export function App() {
     setProgram(next.program);
     setWeights(next.weights);
     clearPendingRemote();
-    if (next.programRejected) setStatus("Коуч прислал битую программу — оставил старую.");
+    if (next.programRejected) setNotice({ text: "Коуч прислал битую программу — оставил старую.", tone: "err" });
   }
 
   function enterIndex(base: DraftSession, sessionLogs: ExerciseLog[], index: number) {
@@ -233,48 +274,85 @@ export function App() {
 
   function goSummary(base: DraftSession) {
     const suggested = suggestWeights(base.day, program, base.logs);
+    const confirmed = { ...suggested, ...base.confirmedWeights };
     const next = {
       ...base,
       phase: "summary" as const,
-      confirmedWeights:
-        Object.keys(base.confirmedWeights).length > 0 ? base.confirmedWeights : suggested,
+      confirmedWeights: confirmed,
       restEndsAt: undefined,
       restTotalSec: undefined,
     };
     persist(next);
     upsertLocal(next);
+    setSendState("idle");
     setView("summary");
   }
 
   function start(day: DayId) {
     applyQueuedRemote();
+    primeRestAudio();
     persist({
       date: todayIso(),
       day,
       cycle: program.cycle,
+      startedAt: Date.now(),
       queueIndex: 0,
       logs: [],
       currentWeightKg: 0,
       currentReps: 0,
       phase: "workout",
       confirmedWeights: {},
+      weightsTouched: [],
     });
+    setNotice(null);
     setView("workout");
   }
 
   function advanceRest() {
     if (!draft || draft.restDoneIndex === draft.queueIndex) return;
-    persist({ ...draft, restDoneIndex: draft.queueIndex });
+    const next = { ...draft, restDoneIndex: draft.queueIndex };
+    enterIndex(next, draft.logs, draft.queueIndex + 1);
+  }
+
+  function stepBack() {
+    if (!draft) return;
+    const built = buildQueue(draft.day, program, weights);
+    const completedIndex = view === "rest" ? draft.queueIndex : draft.queueIndex - 1;
+    if (completedIndex < 0) return;
+    const completed = built[completedIndex];
+    const nextLogs =
+      completed?.type === "set"
+        ? dropLastSet(draft.logs, completed.exerciseId)
+        : draft.logs;
     enterIndex(
-      { ...draft, restDoneIndex: draft.queueIndex },
-      draft.logs,
-      draft.queueIndex + 1,
+      {
+        ...draft,
+        logs: nextLogs,
+        restDoneIndex: undefined,
+      },
+      nextLogs,
+      completedIndex,
     );
+  }
+
+  function skipExercise() {
+    if (!draft) return;
+    const current = queue[draft.queueIndex];
+    const exerciseId = current?.type === "set" ? current.exerciseId : "";
+    const nextIndex = queue.findIndex(
+      (item, index) =>
+        index > draft.queueIndex &&
+        item.type === "set" &&
+        item.exerciseId !== exerciseId,
+    );
+    if (nextIndex >= 0) enterIndex(draft, draft.logs, nextIndex);
+    else goSummary(draft);
   }
 
   function completeCurrent() {
     if (!draft || Date.now() - lastDoneTap.current < 400) return;
     lastDoneTap.current = Date.now();
+    primeRestAudio();
     const built = buildQueue(draft.day, program, weights);
     const item = built[draft.queueIndex];
     if (!item) return;
@@ -315,6 +393,7 @@ export function App() {
       cycle: d.cycle,
       exercises: d.logs,
       completedAt: new Date().toISOString(),
+      ...(d.startedAt ? { durationSec: Math.max(0, Math.round((Date.now() - d.startedAt) / 1000)) } : {}),
     };
   }
 
@@ -345,11 +424,13 @@ export function App() {
       setPin("");
       setPinError(error.message);
     } else {
-      setStatus(
-        error.kind === "server"
-          ? "Сервер не настроен или временно недоступен. Тренировка сохранена."
-          : "Сервер не принял код. Тренировка сохранена, отчёт дошлём.",
-      );
+      setNotice({
+        text:
+          error.kind === "server"
+            ? "Сервер не настроен или временно недоступен. Тренировка сохранена."
+            : "Сервер не принял код. Тренировка сохранена, отчёт дошлём.",
+        tone: "err",
+      });
     }
   }
 
@@ -364,34 +445,37 @@ export function App() {
       const next = applyRemote(remote.program, remote.weights);
       setProgram(next.program);
       setWeights(next.weights);
-      if (next.programRejected) setStatus("Коуч прислал битую программу — оставил старую.");
+      setNotice(
+        next.programRejected
+          ? { text: "Коуч прислал битую программу — оставил старую.", tone: "err" }
+          : null,
+      );
     } catch (error) {
       if (error instanceof AuthError) onAuthFail(error);
-      else setStatus(error instanceof Error ? error.message : "Не удалось обновить программу.");
+      else setNotice({ text: netMessage(error), tone: "err" });
     }
   }
 
   async function deliver(sessions: Session[], nextWeights: Weights): Promise<boolean> {
     setReportBusy(true);
     setSendState("sending");
-    setStatus("");
+    setNotice(null);
     try {
       const result = await report(sessions, nextWeights);
-      const merged = result.weights;
-      if (merged) {
-        saveWeights(merged);
-        setWeights(merged);
+      if (result.weights) {
+        saveWeights(result.weights);
+        setWeights(result.weights);
       }
       setSent(markSent(sessions));
       clearLastSendError();
       setSendState("ok");
-      setStatus(SEND_OK);
+      setNotice({ text: SEND_OK, tone: "ok" });
       return true;
     } catch (error) {
       saveLastSendError();
       setSendState("failed");
       if (error instanceof AuthError) onAuthFail(error);
-      else setStatus(error instanceof Error ? error.message || SEND_FAIL : SEND_FAIL);
+      else setNotice({ text: netMessage(error) || SEND_FAIL, tone: "err" });
       return false;
     } finally {
       setReportBusy(false);
@@ -414,8 +498,12 @@ export function App() {
     });
   }
 
-  function addAssistant(text: string, userId: string, result: { program?: Program | null; weights?: Weights | null; warning?: string }) {
-    setMessageState(userId, "sent");
+  function addAssistant(
+    text: string,
+    userId: string | undefined,
+    result: { program?: Program | null; weights?: Weights | null; warning?: string },
+  ) {
+    if (userId) setMessageState(userId, "sent");
     const assistant: ChatMessage = {
       id: makeId(),
       role: "assistant",
@@ -434,22 +522,25 @@ export function App() {
     const next = applyRemote(result.program, result.weights);
     setProgram(next.program);
     setWeights(next.weights);
-    if (next.programRejected) setChatError("Коуч прислал битую программу — оставил старую.");
+    if (next.programRejected) {
+      setChatError("Коуч прислал битую программу — оставил старую.");
+    }
   }
 
-  async function finishRun(run: ActiveRun, userId?: string) {
+  async function finishRun(run: ActiveRun, controller: AbortController) {
     const startedAt = run.startedAt;
     for (;;) {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000);
       setChatElapsed(elapsed);
       const delay = elapsed < 30 ? 2_000 : elapsed < 180 ? 5_000 : 10_000;
-      await wait(delay, chatAbort.current?.signal);
-      const current = await pollRun(run.agentId, run.runId, run.baseSha, chatAbort.current?.signal);
+      await wait(delay, controller.signal);
+      const current = await pollRun(run.agentId, run.runId, run.baseSha, controller.signal);
       if (current.status !== "pending") {
         clearActiveRun();
         activeRun.current = null;
-        if (userId) addAssistant(current.text || "Готово.", userId, current);
-        setChatError(current.status === "error" ? current.text : current.warning ?? "");
+        addAssistant(current.text || "Готово.", run.messageId, current);
+        if (current.status === "error") setChatError(current.text);
+        else if (current.warning) setChatError(current.warning);
         return;
       }
       if (Date.now() - startedAt >= 10 * 60 * 1000) {
@@ -458,21 +549,24 @@ export function App() {
     }
   }
 
-  async function resumeRun(run: ActiveRun) {
+  async function resumeRun(run: ActiveRun, controller: AbortController) {
     try {
-      await finishRun(run);
+      await finishRun(run, controller);
     } catch (error) {
       if (isAbort(error)) return;
-      setChatError(error instanceof Error ? error.message : "Коуч не ответил.");
+      setChatError(netMessage(error));
     } finally {
       setChatBusy(false);
+      if (chatAbort.current === controller) chatAbort.current = null;
     }
   }
 
-  async function sendChat(text: string) {
-    const userId = makeId();
+  async function sendChat(text: string, existingId?: string) {
+    const userId = existingId ?? makeId();
     const userMessage: ChatMessage = { id: userId, role: "user", text, state: "sending" };
-    const nextMessages = [...messages, userMessage];
+    const nextMessages = existingId
+      ? messages.map((message) => (message.id === existingId ? userMessage : message))
+      : [...messages, userMessage];
     setMessages(nextMessages);
     saveChat(nextMessages);
     setChatBusy(true);
@@ -492,44 +586,67 @@ export function App() {
           runId: started.runId,
           startedAt: Date.now(),
           baseSha: started.baseSha,
+          messageId: userId,
         };
         activeRun.current = run;
         saveActiveRun(run);
-        await finishRun(run, userId);
+        await finishRun(run, controller);
       } else {
         addAssistant(started.text || "Готово.", userId, started);
-        setChatError(started.status === "error" ? started.text : started.warning ?? "");
+        if (started.status === "error") setChatError(started.text);
+        else if (started.warning) setChatError(started.warning);
       }
     } catch (error) {
       if (isAbort(error)) return;
       setMessageState(userId, "failed");
       if (error instanceof AuthError) onAuthFail(error);
       else if (error instanceof BusyError) setChatError(error.message);
-      else setChatError(error instanceof Error ? error.message : "Чат не отправился.");
+      else setChatError(netMessage(error) || "Чат не отправился.");
     } finally {
       setChatBusy(false);
-      chatAbort.current = null;
+      if (chatAbort.current === controller) chatAbort.current = null;
     }
   }
 
-  function onChatHome() {
+  function stopChat() {
     chatAbort.current?.abort();
+    chatAbort.current = null;
+    activeRun.current = null;
+    clearActiveRun();
     setChatBusy(false);
-    setView("home");
+    setChatError("Ожидание остановлено. Запрос на сервере не отменён.");
   }
 
   const last = logs.filter((item) => item.completedAt).at(-1);
   const pending = unsyncedLogs(logs, sent).length;
+  const progressTotal = queue.filter((item) => item.type === "set" && item.kind === "work").length;
+  const progressDone = draft?.logs.reduce(
+    (total, row) => total + row.sets.filter((set) => !set.ramp).length,
+    0,
+  ) ?? 0;
+  const currentKey = draft ? `${draft.date}-${draft.day}` : "";
+  const homeNotice = notice ?? (loadLastSendError() ? { text: SEND_FAIL, tone: "err" as const } : null);
 
   if (!pin) {
     return (
       <Pin
         error={pinError || (!workerConfigured() ? "Сервер ещё не прописан в сборке." : "")}
-        onSubmit={(next) => {
+        onSubmit={async (next) => {
           savePin(next);
-          setPin(next);
-          setPinError("");
-          void authenticate(next).catch(() => undefined);
+          try {
+            await authenticate(next);
+            setPin(next);
+            setPinError("");
+          } catch (error) {
+            if (error instanceof AuthError && error.kind === "pin") {
+              clearPin();
+              setPin("");
+              setPinError("Код не подошёл.");
+            } else {
+              setPin(next);
+              setPinError("Нет сети — впущу, код проверю позже.");
+            }
+          }
         }}
       />
     );
@@ -543,21 +660,48 @@ export function App() {
         status={chatError}
         elapsedSec={chatElapsed}
         onSend={(text) => void sendChat(text)}
-        onRetry={(text) => void sendChat(text)}
-        onHome={onChatHome}
+        onRetry={(id, text) => void sendChat(text, id)}
+        onStop={stopChat}
+        onHome={() => {
+          chatAbort.current?.abort();
+          setChatBusy(false);
+          setView("home");
+        }}
       />
     );
   }
 
   if (view === "summary" && draft) {
-    const key = `${draft.date}-${draft.day}`;
     return (
       <Summary
         draft={draft}
         program={program}
-        status={status}
+        status={notice?.text}
+        statusTone={notice?.tone}
         busy={reportBusy}
-        sendState={sent.includes(key) ? "ok" : sendState}
+        sendState={sent.includes(currentKey) ? "ok" : sendState}
+        suggestions={suggestWeights(draft.day, program, draft.logs)}
+        onUpdateSet={(exerciseId, setIndex, patch) => {
+          const nextLogs = updateSet(draft.logs, exerciseId, setIndex, patch);
+          const next = { ...draft, logs: nextLogs };
+          persist(next);
+          const local = upsertLocal(next);
+          setSent(unmarkSent([local.session]));
+          setSendState("failed");
+          setNotice({ text: "Запись изменена. Повтори отправку.", tone: "info" });
+        }}
+        onWeightConfirm={(exerciseId, weightKg) => {
+          const next = {
+            ...draft,
+            confirmedWeights: { ...draft.confirmedWeights, [exerciseId]: weightKg },
+            weightsTouched: [...new Set([...(draft.weightsTouched ?? []), exerciseId])],
+          };
+          persist(next);
+          const local = upsertLocal(next);
+          setSent(unmarkSent([local.session]));
+          setSendState("failed");
+          setNotice({ text: "Вес на следующий раз изменён. Повтори отправку.", tone: "info" });
+        }}
         onSend={() => {
           const { session, nextWeights } = upsertLocal(draft);
           void deliver([session], nextWeights);
@@ -570,9 +714,13 @@ export function App() {
   if (view === "rest" && draft?.restEndsAt) {
     return (
       <Rest
+        day={draft.day}
         endsAt={draft.restEndsAt}
         totalSec={draft.restTotalSec ?? 0}
         expired={restExpired}
+        next={queue[draft.queueIndex + 1]}
+        onBack={stepBack}
+        onHome={() => setView("home")}
         onSkip={advanceRest}
         onPlus30={() => {
           persist({
@@ -597,41 +745,55 @@ export function App() {
         program={program}
         weightKg={draft.currentWeightKg}
         reps={draft.currentReps}
+        progressDone={progressDone}
+        progressTotal={progressTotal}
         onWeight={(value) => persist({ ...draft, currentWeightKg: value })}
         onReps={(value) => persist({ ...draft, currentReps: value })}
         onDone={completeCurrent}
+        onBack={stepBack}
         onHome={() => setView("home")}
+        onSkipExercise={skipExercise}
       />
     );
   }
 
   return (
-    <Home
-      day={pickedDay}
-      hasDraft={Boolean(draft)}
-      last={last}
-      pending={pending}
-      program={program}
-      busy={reportBusy}
-      onPickDay={setPickedDay}
-      onStart={() => start(pickedDay)}
-      onResume={() =>
-        setView(
-          draft?.phase === "rest" ? "rest" : draft?.phase === "summary" ? "summary" : "workout",
-        )
-      }
-      onDiscard={() => {
-        clearDraft();
-        setDraft(null);
-        setView("home");
-      }}
-      onSend={sendPending}
-      onChat={() => {
-        setStatus("");
-        setView("chat");
-      }}
-      status={status || (loadLastSendError() ? SEND_FAIL : "")}
-    />
+    <>
+      {notice && view !== "home" ? <Banner tone={notice.tone}>{notice.text}</Banner> : null}
+      <Home
+        day={pickedDay}
+        recommendedDay={nextDay(logs)}
+        hasDraft={Boolean(draft)}
+        draft={draft}
+        last={last}
+        pending={pending}
+        program={program}
+        busy={reportBusy}
+        online={online}
+        coachBusy={Boolean(activeRun.current && chatBusy)}
+        coachElapsed={chatElapsed}
+        status={homeNotice?.text}
+        statusTone={homeNotice?.tone}
+        onPickDay={setPickedDay}
+        onStart={() => start(pickedDay)}
+        onResume={() =>
+          setView(
+            draft?.phase === "rest" ? "rest" : draft?.phase === "summary" ? "summary" : "workout",
+          )
+        }
+        onDiscard={() => {
+          clearDraft();
+          setDraft(null);
+          setView("home");
+        }}
+        onSend={sendPending}
+        onChat={() => {
+          setNotice(null);
+          setChatError("");
+          setView("chat");
+        }}
+      />
+    </>
   );
 }
 
@@ -639,15 +801,18 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function wait(ms: number, signal?: AbortSignal): Promise<void> {
+function wait(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const id = window.setTimeout(resolve, ms);
+    const id = window.setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, ms);
     const abort = () => {
       window.clearTimeout(id);
       reject(new DOMException("Отменено", "AbortError"));
     };
-    if (signal?.aborted) abort();
-    signal?.addEventListener("abort", abort, { once: true });
+    if (signal.aborted) abort();
+    signal.addEventListener("abort", abort, { once: true });
   });
 }
 

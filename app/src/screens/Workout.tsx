@@ -2,6 +2,9 @@ import type { Program, QueueItem, QueueSet } from "../types";
 import { formatKg, formatRest } from "../progression";
 import { remainingExercises } from "../session";
 import { Stepper } from "../components/Stepper";
+import { ActionBar } from "../components/ActionBar";
+import { ProgressBar } from "../components/ProgressBar";
+import { TopBar } from "../components/TopBar";
 
 type Props = {
   day: string;
@@ -11,10 +14,14 @@ type Props = {
   program: Program;
   weightKg: number;
   reps: number;
+  progressDone: number;
+  progressTotal: number;
   onWeight: (n: number) => void;
   onReps: (n: number) => void;
   onDone: () => void;
+  onBack: () => void;
   onHome: () => void;
+  onSkipExercise: () => void;
 };
 
 export function Workout({
@@ -25,28 +32,40 @@ export function Workout({
   program,
   weightKg,
   reps,
+  progressDone,
+  progressTotal,
   onWeight,
   onReps,
   onDone,
+  onBack,
   onHome,
+  onSkipExercise,
 }: Props) {
+  const progressLabel = `Подход ${progressDone} из ${progressTotal}`;
   if (item.type === "warmup") {
     return (
-      <div className="shell stack">
-        <div className="topbar">
-          <span className="pill">День {day}</span>
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
-            На старт
-          </button>
-        </div>
-        <h1>Разминка</h1>
+      <div className="shell shell--bar stack">
+        <TopBar
+          left={
+            <button type="button" className="text-button" onClick={onHome}>
+              На главную
+            </button>
+          }
+          right={<span className="pill">День {day}</span>}
+        >
+          Разминка
+        </TopBar>
+        <ProgressBar value={0} max={progressTotal} label={progressLabel} />
+        <h1>Разогрейся</h1>
         <div className="card stack">
           <p>Вело {program.warmup.bikeMin} мин</p>
           <p>Гипер без диска {program.warmup.hyper} — не рабочее</p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={onDone}>
-          Дальше
-        </button>
+        <ActionBar>
+          <button type="button" className="btn btn-primary" onClick={onDone}>
+            Дальше
+          </button>
+        </ActionBar>
       </div>
     );
   }
@@ -59,10 +78,14 @@ export function Workout({
       queueIndex={queueIndex}
       weightKg={weightKg}
       reps={reps}
+      progressDone={progressDone}
+      progressTotal={progressTotal}
       onWeight={onWeight}
       onReps={onReps}
       onDone={onDone}
+      onBack={onBack}
       onHome={onHome}
+      onSkipExercise={onSkipExercise}
     />
   );
 }
@@ -74,10 +97,14 @@ function SetCard({
   queueIndex,
   weightKg,
   reps,
+  progressDone,
+  progressTotal,
   onWeight,
   onReps,
   onDone,
+  onBack,
   onHome,
+  onSkipExercise,
 }: {
   day: string;
   item: QueueSet;
@@ -85,29 +112,48 @@ function SetCard({
   queueIndex: number;
   weightKg: number;
   reps: number;
+  progressDone: number;
+  progressTotal: number;
   onWeight: (n: number) => void;
   onReps: (n: number) => void;
   onDone: () => void;
+  onBack: () => void;
   onHome: () => void;
+  onSkipExercise: () => void;
 }) {
   const upcoming = remainingExercises(queue, queueIndex);
-  const restHint =
-    item.restAfterSec === 0 && item.exerciseId === "hammer1"
-      ? "Дальше сразу вторая рука / широко"
+  const nextItem = queue[queueIndex + 1];
+  const clusterHint =
+    item.restAfterSec === 0 && nextItem?.type === "set"
+      ? "Дальше сразу следующий элемент пары"
       : item.restAfterSec > 0
         ? `Отдых ${formatRest(item.restAfterSec)}`
         : "Потом итог";
 
   return (
-    <div className="shell stack">
-      <div className="topbar">
+    <div className="shell shell--bar stack">
+      <TopBar
+        left={
+          <button type="button" className="text-button" onClick={onBack}>
+            ← Назад
+          </button>
+        }
+        right={
+          <button type="button" className="text-button" onClick={onHome}>
+            На главную
+          </button>
+        }
+      >
         <span className="pill">День {day}</span>
-        <button type="button" className="btn btn-ghost" onClick={onHome}>
-          На старт
-        </button>
-      </div>
+      </TopBar>
 
-      <div className="card">
+      <ProgressBar
+        value={progressDone}
+        max={progressTotal}
+        label={`Подход ${progressDone} из ${progressTotal}`}
+      />
+
+      <div className="card set-card">
         <div className="set-num">
           {item.kind === "ramp" ? "Рамп" : "Рабочий"} · подход {item.setNumber} / {item.totalSets}
         </div>
@@ -116,6 +162,7 @@ function SetCard({
           Цель {formatKg(item.targetWeightKg)} кг · {item.repsMin}–{item.repsMax} повт.
           {item.rir ? ` · RIR ${item.rir}` : ""}
         </p>
+        <div className="next-hint">{clusterHint}</div>
       </div>
 
       <div className="card stack">
@@ -136,24 +183,31 @@ function SetCard({
         />
       </div>
 
-      <button type="button" className="btn btn-primary" onClick={onDone}>
-        Готово
-      </button>
-      <p className="hint">{restHint}</p>
+      <div className="exercise-menu">
+        <button type="button" className="text-button" onClick={onSkipExercise}>
+          Тренажёр занят — пропустить упражнение
+        </button>
+      </div>
 
       {upcoming.length > 0 ? (
         <div>
           <h2>Дальше</h2>
           <ul className="list">
-            {upcoming.map((ex) => (
-              <li key={ex.name} className={ex.current ? "current" : undefined}>
-                {ex.current ? "Сейчас · " : ""}
-                {ex.name}
+            {upcoming.map((exercise) => (
+              <li key={exercise.name} className={exercise.current ? "current" : undefined}>
+                {exercise.current ? "Сейчас · " : ""}
+                {exercise.name}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
+
+      <ActionBar>
+        <button type="button" className="btn btn-primary" onClick={onDone}>
+          Готово
+        </button>
+      </ActionBar>
     </div>
   );
 }

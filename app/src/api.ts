@@ -43,6 +43,14 @@ export function workerConfigured(): boolean {
   return BASE.length > 0;
 }
 
+export function netMessage(error: unknown): string {
+  if (!navigator.onLine || error instanceof TypeError) {
+    return "Нет сети. Сохранил локально, дошлю сам.";
+  }
+  if (error instanceof Error) return error.message;
+  return "Не удалось связаться с сервером.";
+}
+
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!BASE) throw new Error("Сервер ещё не подключён");
   const pin = loadPin();

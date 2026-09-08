@@ -53,6 +53,7 @@ export type Session = {
   cycle: number;
   exercises: ExerciseLog[];
   completedAt?: string;
+  durationSec?: number;
 };
 
 export type QueueWarmup = { type: "warmup" };
@@ -86,6 +87,7 @@ export type DraftSession = {
   date: string;
   day: DayId;
   cycle: number;
+  startedAt?: number;
   queueIndex: number;
   logs: ExerciseLog[];
   currentWeightKg: number;
@@ -95,6 +97,7 @@ export type DraftSession = {
   restTotalSec?: number;
   restDoneIndex?: number;
   confirmedWeights: Weights;
+  weightsTouched?: string[];
 };
 
 export type PendingRemote = {
@@ -107,4 +110,5 @@ export type ActiveRun = {
   runId: string;
   startedAt: number;
   baseSha?: string;
+  messageId?: string;
 };
