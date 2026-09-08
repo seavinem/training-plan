@@ -1,0 +1,153 @@
+{
+  "date": "2026-09-04",
+  "day": "C",
+  "cycle": 1,
+  "exercises": [
+    {
+      "id": "hammer2",
+      "sets": [
+        {
+          "weightKg": 25,
+          "reps": 12,
+          "ramp": true
+        },
+        {
+          "weightKg": 35,
+          "reps": 12,
+          "ramp": true
+        },
+        {
+          "weightKg": 35,
+          "reps": 8
+        },
+        {
+          "weightKg": 35,
+          "reps": 8
+        },
+        {
+          "weightKg": 35,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": "hammer1",
+      "sets": [
+        {
+          "weightKg": 45,
+          "reps": 10
+        },
+        {
+          "weightKg": 45,
+          "reps": 10
+        },
+        {
+          "weightKg": 45,
+          "reps": 10
+        }
+      ]
+    },
+    {
+      "id": "pecDeck",
+      "sets": [
+        {
+          "weightKg": 40,
+          "reps": 15
+        },
+        {
+          "weightKg": 40,
+          "reps": 15
+        },
+        {
+          "weightKg": 40,
+          "reps": 15
+        }
+      ]
+    },
+    {
+      "id": "pulldownV",
+      "sets": [
+        {
+          "weightKg": 55,
+          "reps": 10
+        },
+        {
+          "weightKg": 55,
+          "reps": 10
+        },
+        {
+          "weightKg": 55,
+          "reps": 10
+        },
+        {
+          "weightKg": 55,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": "legCurl",
+      "sets": [
+        {
+          "weightKg": 35,
+          "reps": 12
+        },
+        {
+          "weightKg": 35,
+          "reps": 12
+        },
+        {
+          "weightKg": 35,
+          "reps": 12
+        },
+        {
+          "weightKg": 35,
+          "reps": 12
+        }
+      ]
+    },
+    {
+      "id": "pushdownC",
+      "sets": [
+        {
+          "weightKg": 50,
+          "reps": 15
+        },
+        {
+          "weightKg": 50,
+          "reps": 15
+        },
+        {
+          "weightKg": 50,
+          "reps": 12
+        }
+      ]
+    },
+    {
+      "id": "lateralsC",
+      "sets": [
+        {
+          "weightKg": 5,
+          "reps": 20
+        },
+        {
+          "weightKg": 5,
+          "reps": 20
+        },
+        {
+          "weightKg": 5,
+          "reps": 15
+        },
+        {
+          "weightKg": 5,
+          "reps": 15
+        },
+        {
+          "weightKg": 5,
+          "reps": 15
+        }
+      ]
+    }
+  ],
+  "completedAt": "2026-09-04T08:09:55.514Z"
+}
