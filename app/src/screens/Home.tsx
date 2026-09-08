@@ -7,12 +7,14 @@ type Props = {
   day: DayId;
   hasDraft: boolean;
   last: Session | undefined;
+  pending: number;
   program: Program;
+  busy: boolean;
   onPickDay: (d: DayId) => void;
   onStart: () => void;
   onResume: () => void;
   onDiscard: () => void;
-  onSettings: () => void;
+  onSend: () => void;
   status?: string;
 };
 
@@ -20,32 +22,26 @@ export function Home({
   day,
   hasDraft,
   last,
+  pending,
   program,
+  busy,
   onPickDay,
   onStart,
   onResume,
   onDiscard,
-  onSettings,
+  onSend,
   status,
 }: Props) {
   return (
     <div className="shell stack">
-      <div className="topbar">
-        <h1>Зал</h1>
-        <button type="button" className="btn btn-ghost" onClick={onSettings}>
-          GitHub
-        </button>
-      </div>
+      <h1>Зал</h1>
       {status ? (
-        <div className={`banner ${/ошибка|не удалось/i.test(status) ? "err" : "ok"}`}>
-          {status}
-        </div>
+        <div className={`banner ${/не ушл/i.test(status) ? "err" : "ok"}`}>{status}</div>
       ) : null}
 
       <div className="card">
         <h2>Следующий день</h2>
         <div className="hero-day">{day}</div>
-        <p className="muted">Через день, A → B → C. Можно выбрать вручную.</p>
         <div className="day-pick" style={{ marginTop: 14 }}>
           {(["A", "B", "C"] as DayId[]).map((d) => (
             <button
@@ -76,6 +72,12 @@ export function Home({
         </button>
       )}
 
+      {pending > 0 ? (
+        <button type="button" className="btn" disabled={busy} onClick={onSend}>
+          {busy ? "Отправляю…" : "Отправить отчёт"}
+        </button>
+      ) : null}
+
       {last ? (
         <div className="card">
           <h2>Прошлый раз · день {last.day}</h2>
@@ -97,11 +99,6 @@ export function Home({
           </ul>
         </div>
       ) : null}
-
-      <p className="hint">
-        Safari → Поделиться → На экран «Домой». В зале держи экран включённым на отдыхе — фон на
-        iPhone таймер не считает.
-      </p>
     </div>
   );
 }

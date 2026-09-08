@@ -73,7 +73,7 @@ export type QueueSet = {
 
 export type QueueItem = QueueWarmup | QueueSet;
 
-export type View = "home" | "workout" | "rest" | "summary" | "settings";
+export type View = "home" | "workout" | "rest" | "summary";
 
 export type DraftSession = {
   date: string;

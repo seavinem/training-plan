@@ -1,5 +1,5 @@
 {
-  "cycle": 1,
+  "cycle": 2,
   "warmup": {
     "bikeMin": 5,
     "hyper": "2×15"
@@ -131,7 +131,7 @@
           "name": "Разгибания ног",
           "sets": 4,
           "repsMin": 10,
-          "repsMax": 15,
+          "repsMax": 12,
           "weightKg": 40,
           "rir": "2",
           "restSec": 75,
@@ -223,7 +223,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 35,
+          "weightKg": 40,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5

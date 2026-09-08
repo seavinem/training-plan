@@ -2,11 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import programJson from "../../data/program.json";
 import { Home } from "./screens/Home";
 import { Rest } from "./screens/Rest";
-import { Settings } from "./screens/Settings";
 import { Summary } from "./screens/Summary";
 import { Workout } from "./screens/Workout";
-import { commitSession, downloadJson, shareOrCopy } from "./github";
-import { sessionFilename, suggestWeights, todayIso } from "./progression";
+import { commitAllLogs, commitSession } from "./github";
+import { suggestWeights, todayIso } from "./progression";
 import {
   appendSet,
   buildQueue,
@@ -18,32 +17,28 @@ import {
   loadDraft,
   loadGithub,
   loadLogs,
+  loadSent,
   loadWeights,
+  markSent,
   mergeWeights,
   saveDraft,
-  saveGithub,
   saveLogs,
   saveWeights,
+  unsyncedLogs,
 } from "./storage";
-import type {
-  DayId,
-  DraftSession,
-  ExerciseLog,
-  GithubSettings,
-  Program,
-  Session,
-  View,
-} from "./types";
+import type { DayId, DraftSession, ExerciseLog, Program, Session, View } from "./types";
 
 const program = programJson as Program;
+const SEND_FAIL = "Отчёт не ушёл. Нажми ещё раз.";
 
 export function App() {
   const [weights, setWeights] = useState(loadWeights);
   const [logs, setLogs] = useState(loadLogs);
+  const [sent, setSent] = useState(loadSent);
   const [draft, setDraft] = useState<DraftSession | null>(loadDraft);
   const [view, setView] = useState<View>(() => viewFromDraft(loadDraft()));
   const [pickedDay, setPickedDay] = useState<DayId>(() => nextDay(loadLogs()));
-  const [github, setGithub] = useState(loadGithub);
+  const [github] = useState(loadGithub);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
@@ -138,14 +133,16 @@ export function App() {
 
   function goSummary(base: DraftSession) {
     const suggested = suggestWeights(base.day, program, base.logs);
-    persist({
+    const next = {
       ...base,
-      phase: "summary",
+      phase: "summary" as const,
       confirmedWeights:
         Object.keys(base.confirmedWeights).length > 0 ? base.confirmedWeights : suggested,
       restEndsAt: undefined,
       restTotalSec: undefined,
-    });
+    };
+    persist(next);
+    upsertLocal(next);
     setView("summary");
   }
 
@@ -208,36 +205,56 @@ export function App() {
     };
   }
 
-  function saveLocal(d: DraftSession): { session: Session; nextWeights: typeof weights } {
+  function upsertLocal(d: DraftSession): { session: Session; nextLogs: Session[]; nextWeights: typeof weights } {
     const session = buildSession(d);
-    const nextLogs = [...logs, session];
     const nextWeights = mergeWeights(weights, d.confirmedWeights);
+    const idx = logs.findIndex((s) => s.date === session.date && s.day === session.day);
+    const nextLogs =
+      idx >= 0 ? logs.map((s, i) => (i === idx ? session : s)) : [...logs, session];
     saveLogs(nextLogs);
     saveWeights(nextWeights);
     setLogs(nextLogs);
     setWeights(nextWeights);
+    return { session, nextLogs, nextWeights };
+  }
+
+  function finishHome(nextLogs: Session[]) {
     clearDraft();
     setDraft(null);
     setPickedDay(nextDay(nextLogs));
     setView("home");
-    return { session, nextWeights };
+  }
+
+  function sendDraft(d: DraftSession) {
+    setBusy(true);
+    setStatus("");
+    const { session, nextLogs, nextWeights } = upsertLocal(d);
+    commitSession(github, session, nextWeights)
+      .then(() => {
+        setSent(markSent([session]));
+        finishHome(nextLogs);
+        setStatus("Отчёт отправлен");
+      })
+      .catch(() => setStatus(SEND_FAIL))
+      .finally(() => setBusy(false));
+  }
+
+  function sendPending() {
+    setBusy(true);
+    setStatus("");
+    const pending = unsyncedLogs(logs, sent);
+    commitAllLogs(github, pending.length > 0 ? pending : logs, weights)
+      .then(() => {
+        setSent(markSent(pending.length > 0 ? pending : logs));
+        setStatus("Отчёт отправлен");
+      })
+      .catch(() => setStatus(SEND_FAIL))
+      .finally(() => setBusy(false));
   }
 
   const last = logs.filter((s) => s.completedAt).at(-1);
+  const pending = unsyncedLogs(logs, sent).length;
   const remainingMs = draft?.restEndsAt ? draft.restEndsAt - Date.now() : 0;
-
-  if (view === "settings") {
-    return (
-      <Settings
-        value={github}
-        onChange={(next: GithubSettings) => {
-          setGithub(next);
-          saveGithub(next);
-        }}
-        onBack={() => setView(draft ? draft.phase : "home")}
-      />
-    );
-  }
 
   if (view === "summary" && draft) {
     return (
@@ -246,32 +263,7 @@ export function App() {
         program={program}
         status={status}
         busy={busy}
-        onWeight={(id, kg) =>
-          persist({ ...draft, confirmedWeights: { ...draft.confirmedWeights, [id]: kg } })
-        }
-        onSave={() => {
-          saveLocal(draft);
-          setStatus("Сохранено на телефоне");
-        }}
-        onDownload={() =>
-          downloadJson(sessionFilename(draft.date, draft.day), buildSession(draft))
-        }
-        onShare={() => {
-          void shareOrCopy(sessionFilename(draft.date, draft.day), buildSession(draft))
-            .then(setStatus)
-            .catch(() => setStatus("Не удалось поделиться"));
-        }}
-        onGithub={() => {
-          setBusy(true);
-          setStatus("");
-          const { session, nextWeights } = saveLocal(draft);
-          commitSession(github, session, nextWeights)
-            .then(() => setStatus("Закоммичено в GitHub"))
-            .catch((err: unknown) =>
-              setStatus(err instanceof Error ? err.message : "Ошибка GitHub"),
-            )
-            .finally(() => setBusy(false));
-        }}
+        onSend={() => sendDraft(draft)}
       />
     );
   }
@@ -319,16 +311,22 @@ export function App() {
       day={pickedDay}
       hasDraft={Boolean(draft)}
       last={last}
+      pending={pending}
       program={program}
+      busy={busy}
       onPickDay={setPickedDay}
       onStart={() => start(pickedDay)}
-      onResume={() => setView(draft?.phase === "rest" ? "rest" : draft?.phase === "summary" ? "summary" : "workout")}
+      onResume={() =>
+        setView(
+          draft?.phase === "rest" ? "rest" : draft?.phase === "summary" ? "summary" : "workout",
+        )
+      }
       onDiscard={() => {
         clearDraft();
         setDraft(null);
         setView("home");
       }}
-      onSettings={() => setView("settings")}
+      onSend={sendPending}
       status={status}
     />
   );

@@ -149,7 +149,7 @@ export function defaultsForSet(
     const last = prev[prev.length - 1];
     return { weightKg: last.weightKg, reps: last.reps };
   }
-  return { weightKg: item.targetWeightKg, reps: item.repsMax };
+  return { weightKg: item.targetWeightKg, reps: item.repsMin };
 }
 
 const NEXT: Record<DayId, DayId> = { A: "B", B: "C", C: "A" };

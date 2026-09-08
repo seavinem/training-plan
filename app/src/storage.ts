@@ -1,10 +1,12 @@
 import seedWeights from "../../data/weights.json";
+import { withToken } from "./github";
 import type { DraftSession, GithubSettings, Session, Weights } from "./types";
 
 const DRAFT = "gym-draft";
 const LOGS = "gym-logs";
 const WEIGHTS = "gym-weights";
 const GITHUB = "gym-github";
+const SENT = "gym-sent";
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -14,6 +16,10 @@ function read<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+export function sessionKey(session: Session): string {
+  return `${session.date}-${session.day}`;
 }
 
 export function loadWeights(): Weights {
@@ -45,16 +51,33 @@ export function clearDraft(): void {
 }
 
 export function loadGithub(): GithubSettings {
-  return read<GithubSettings>(GITHUB, {
+  const stored = read<GithubSettings>(GITHUB, {
     token: "",
     owner: "",
-    repo: "training-plan",
-    branch: "main",
+    repo: "",
+    branch: "",
   });
+  const next = withToken(stored.token || "");
+  saveGithub(next);
+  return next;
 }
 
 export function saveGithub(settings: GithubSettings): void {
-  localStorage.setItem(GITHUB, JSON.stringify(settings));
+  localStorage.setItem(GITHUB, JSON.stringify(withToken(settings.token)));
+}
+
+export function loadSent(): string[] {
+  return read<string[]>(SENT, []);
+}
+
+export function markSent(sessions: Session[]): string[] {
+  const next = [...new Set([...loadSent(), ...sessions.map(sessionKey)])];
+  localStorage.setItem(SENT, JSON.stringify(next));
+  return next;
+}
+
+export function unsyncedLogs(logs: Session[], sent: string[]): Session[] {
+  return logs.filter((s) => s.completedAt && !sent.includes(sessionKey(s)));
 }
 
 export function mergeWeights(current: Weights, next: Weights): Weights {

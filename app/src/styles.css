@@ -112,6 +112,10 @@ p {
   transform: scale(0.98);
 }
 
+.btn:disabled {
+  opacity: 0.55;
+}
+
 .btn-primary {
   background: var(--accent);
   color: var(--accent-text);
