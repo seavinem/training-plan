@@ -1,0 +1,136 @@
+{
+  "date": "2026-09-06",
+  "day": "A",
+  "cycle": 1,
+  "exercises": [
+    {
+      "id": "squat",
+      "sets": [
+        {
+          "weightKg": 30,
+          "reps": 10,
+          "ramp": true
+        },
+        {
+          "weightKg": 45,
+          "reps": 6,
+          "ramp": true
+        },
+        {
+          "weightKg": 60,
+          "reps": 8
+        },
+        {
+          "weightKg": 60,
+          "reps": 8
+        },
+        {
+          "weightKg": 60,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": "incline",
+      "sets": [
+        {
+          "weightKg": 40,
+          "reps": 12
+        },
+        {
+          "weightKg": 40,
+          "reps": 12
+        },
+        {
+          "weightKg": 40,
+          "reps": 10
+        },
+        {
+          "weightKg": 40,
+          "reps": 9
+        }
+      ]
+    },
+    {
+      "id": "hammers",
+      "sets": [
+        {
+          "weightKg": 10,
+          "reps": 10
+        },
+        {
+          "weightKg": 12.5,
+          "reps": 10
+        },
+        {
+          "weightKg": 12.5,
+          "reps": 10
+        },
+        {
+          "weightKg": 12.5,
+          "reps": 10
+        }
+      ]
+    },
+    {
+      "id": "pulldownWide",
+      "sets": [
+        {
+          "weightKg": 60,
+          "reps": 10
+        },
+        {
+          "weightKg": 60,
+          "reps": 10
+        },
+        {
+          "weightKg": 60,
+          "reps": 8
+        },
+        {
+          "weightKg": 60,
+          "reps": 8
+        }
+      ]
+    },
+    {
+      "id": "ezOh",
+      "sets": [
+        {
+          "weightKg": 17.5,
+          "reps": 12
+        },
+        {
+          "weightKg": 22.5,
+          "reps": 12
+        },
+        {
+          "weightKg": 22.5,
+          "reps": 12
+        }
+      ]
+    },
+    {
+      "id": "lateralsA",
+      "sets": [
+        {
+          "weightKg": 6,
+          "reps": 15
+        },
+        {
+          "weightKg": 8,
+          "reps": 15
+        },
+        {
+          "weightKg": 8,
+          "reps": 15
+        },
+        {
+          "weightKg": 8,
+          "reps": 15
+        }
+      ]
+    }
+  ],
+  "completedAt": "2026-09-06T11:06:49.076Z"
+}
