@@ -21,7 +21,7 @@
           "sets": 3,
           "repsMin": 6,
           "repsMax": 8,
-          "weightKg": 60,
+          "weightKg": 65,
           "rir": "2",
           "restSec": 180,
           "incrementKg": 5
@@ -65,7 +65,7 @@
           "sets": 3,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 20,
+          "weightKg": 22.5,
           "rir": "2",
           "restSec": 90,
           "incrementKg": 2.5
@@ -76,7 +76,7 @@
           "sets": 4,
           "repsMin": 12,
           "repsMax": 15,
-          "weightKg": 6,
+          "weightKg": 8,
           "rir": "1–2",
           "restSec": 60,
           "incrementKg": 2.5
@@ -99,7 +99,7 @@
           "sets": 4,
           "repsMin": 8,
           "repsMax": 12,
-          "weightKg": 55,
+          "weightKg": 57.5,
           "rir": "2",
           "restSec": 120,
           "incrementKg": 2.5
@@ -121,7 +121,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 8,
+          "weightKg": 12.5,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
@@ -132,7 +132,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 15,
-          "weightKg": 40,
+          "weightKg": 42.5,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
@@ -143,7 +143,7 @@
           "sets": 3,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 50,
+          "weightKg": 52.5,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
@@ -154,7 +154,7 @@
           "sets": 3,
           "repsMin": 12,
           "repsMax": 15,
-          "weightKg": 6,
+          "weightKg": 8,
           "rir": "1–2",
           "restSec": 60,
           "incrementKg": 2.5
@@ -177,7 +177,7 @@
           "sets": 3,
           "repsMin": 8,
           "repsMax": 10,
-          "weightKg": 45,
+          "weightKg": 47.5,
           "rir": "1–2",
           "restSec": 0,
           "incrementKg": 2.5,
@@ -201,7 +201,7 @@
           "sets": 3,
           "repsMin": 12,
           "repsMax": 15,
-          "weightKg": 40,
+          "weightKg": 42.5,
           "rir": "1–2",
           "restSec": 60,
           "incrementKg": 2.5
@@ -223,7 +223,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 35,
+          "weightKg": 37.5,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
