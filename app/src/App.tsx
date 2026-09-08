@@ -4,7 +4,7 @@ import { Home } from "./screens/Home";
 import { Rest } from "./screens/Rest";
 import { Summary } from "./screens/Summary";
 import { Workout } from "./screens/Workout";
-import { commitAllLogs, commitSession } from "./github";
+import { commitAllLogs, resolveToken, shareReport } from "./github";
 import { suggestWeights, todayIso } from "./progression";
 import {
   appendSet,
@@ -225,31 +225,44 @@ export function App() {
     setView("home");
   }
 
-  function sendDraft(d: DraftSession) {
+  async function deliver(sessions: Session[], nextWeights: typeof weights, afterOk?: () => void) {
     setBusy(true);
     setStatus("");
+    const done = sessions.filter((s) => s.completedAt);
+    try {
+      if (resolveToken(github) && done.length > 0) {
+        try {
+          await commitAllLogs(github, done, nextWeights);
+          setSent(markSent(done));
+          afterOk?.();
+          setStatus("Отчёт отправлен");
+          return;
+        } catch {
+          /* iOS share */
+        }
+      }
+      const how = await shareReport(done, nextWeights);
+      afterOk?.();
+      setStatus(
+        how === "copied"
+          ? "Скопировано. Вставь это мне в чат."
+          : "Файл готов. Отправь его мне в этот чат.",
+      );
+    } catch {
+      setStatus(SEND_FAIL);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function sendDraft(d: DraftSession) {
     const { session, nextLogs, nextWeights } = upsertLocal(d);
-    commitSession(github, session, nextWeights)
-      .then(() => {
-        setSent(markSent([session]));
-        finishHome(nextLogs);
-        setStatus("Отчёт отправлен");
-      })
-      .catch(() => setStatus(SEND_FAIL))
-      .finally(() => setBusy(false));
+    void deliver([session], nextWeights, () => finishHome(nextLogs));
   }
 
   function sendPending() {
-    setBusy(true);
-    setStatus("");
     const pending = unsyncedLogs(logs, sent);
-    commitAllLogs(github, pending.length > 0 ? pending : logs, weights)
-      .then(() => {
-        setSent(markSent(pending.length > 0 ? pending : logs));
-        setStatus("Отчёт отправлен");
-      })
-      .catch(() => setStatus(SEND_FAIL))
-      .finally(() => setBusy(false));
+    void deliver(pending.length > 0 ? pending : logs, weights);
   }
 
   const last = logs.filter((s) => s.completedAt).at(-1);

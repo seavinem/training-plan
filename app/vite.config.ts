@@ -20,6 +20,13 @@ export default defineConfig({
       includeAssets: ["apple-touch-icon.png", "icon.svg"],
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,json,woff2}"],
+        navigateFallbackDenylist: [/^https:\/\/api\.github\.com/],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/api\.github\.com\//,
+            handler: "NetworkOnly",
+          },
+        ],
       },
       manifest: {
         name: "Зал — Кирил",

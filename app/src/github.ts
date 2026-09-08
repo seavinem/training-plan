@@ -1,5 +1,5 @@
 import type { GithubSettings, Session, Weights } from "./types";
-import { sessionFilename } from "./progression";
+import { sessionFilename, todayIso } from "./progression";
 
 export const REPORT_DEST = {
   owner: "seavinem",
@@ -9,6 +9,11 @@ export const REPORT_DEST = {
 
 export function withToken(token: string): GithubSettings {
   return { token: token.trim(), ...REPORT_DEST };
+}
+
+export function resolveToken(settings: GithubSettings): string {
+  const fromEnv = (import.meta.env.VITE_REPORT_TOKEN as string | undefined)?.trim() ?? "";
+  return fromEnv || settings.token?.trim() || "";
 }
 
 function toBase64(text: string): string {
@@ -22,10 +27,12 @@ function toBase64(text: string): string {
 
 const SEND_FAIL = "Отчёт не ушёл. Нажми ещё раз.";
 
-function branchCandidates(): string[] {
-  return [REPORT_DEST.branch, "master", "main"].filter(
-    (branch, i, all) => branch && all.indexOf(branch) === i,
-  );
+type PutError = Error & { status?: number };
+
+function fail(status?: number): PutError {
+  const err = new Error(SEND_FAIL) as PutError;
+  err.status = status;
+  return err;
 }
 
 async function putFileOnBranch(
@@ -42,54 +49,50 @@ async function putFileOnBranch(
     "X-GitHub-Api-Version": "2022-11-28",
   };
 
-  let sha: string | undefined;
-  const existing = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, { headers });
-  if (existing.ok) {
+  async function shaOf(): Promise<string | undefined> {
+    const existing = await fetch(`${api}?ref=${encodeURIComponent(branch)}`, {
+      headers,
+      cache: "no-store",
+    });
+    if (!existing.ok) return undefined;
     const body = (await existing.json()) as { sha?: string };
-    sha = body.sha;
+    return body.sha;
   }
 
-  const res = await fetch(api, {
-    method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message,
-      content: toBase64(content),
-      branch,
-      ...(sha ? { sha } : {}),
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(SEND_FAIL);
+  async function put(sha?: string): Promise<Response> {
+    return fetch(api, {
+      method: "PUT",
+      cache: "no-store",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        content: toBase64(content),
+        branch,
+        ...(sha ? { sha } : {}),
+      }),
+    });
   }
+
+  let sha = await shaOf();
+  let res = await put(sha);
+  if (res.status === 409 || res.status === 422) {
+    sha = await shaOf();
+    res = await put(sha);
+  }
+  if (!res.ok) throw fail(res.status);
 }
 
 async function putFile(token: string, path: string, content: string, message: string): Promise<void> {
-  let last: Error = new Error(SEND_FAIL);
-  for (const branch of branchCandidates()) {
-    try {
-      await putFileOnBranch(token, branch, path, content, message);
-      return;
-    } catch (err) {
-      last = err instanceof Error ? err : last;
-    }
+  try {
+    await putFileOnBranch(token, REPORT_DEST.branch, path, content, message);
+  } catch (err) {
+    const status = (err as PutError).status;
+    if (status === 401 || status === 403) throw err;
+    await putFileOnBranch(token, "main", path, content, message);
   }
-  throw last;
 }
 
-function requireToken(settings: GithubSettings): string {
-  const token = settings.token?.trim();
-  if (!token) throw new Error(SEND_FAIL);
-  return token;
-}
-
-export async function commitSession(
-  settings: GithubSettings,
-  session: Session,
-  weights: Weights,
-): Promise<void> {
-  const token = requireToken(withToken(settings.token));
+async function writeSession(token: string, session: Session, weights: Weights): Promise<void> {
   const file = sessionFilename(session.date, session.day);
   await putFile(
     token,
@@ -105,14 +108,25 @@ export async function commitSession(
   );
 }
 
+export async function commitSession(
+  settings: GithubSettings,
+  session: Session,
+  weights: Weights,
+): Promise<void> {
+  const token = resolveToken(settings);
+  if (!token) throw fail();
+  await writeSession(token, session, weights);
+}
+
 export async function commitAllLogs(
   settings: GithubSettings,
   sessions: Session[],
   weights: Weights,
 ): Promise<void> {
-  const token = requireToken(withToken(settings.token));
+  const token = resolveToken(settings);
+  if (!token) throw fail();
   const done = sessions.filter((s) => s.completedAt);
-  if (done.length === 0) throw new Error(SEND_FAIL);
+  if (done.length === 0) throw fail();
   for (const session of done) {
     const file = sessionFilename(session.date, session.day);
     await putFile(
@@ -129,4 +143,25 @@ export async function commitAllLogs(
     JSON.stringify(weights, null, 2) + "\n",
     `weights: после дня ${last.day} ${last.date}`,
   );
+}
+
+export async function shareReport(sessions: Session[], weights: Weights): Promise<"shared" | "copied"> {
+  const payload = { sessions: sessions.filter((s) => s.completedAt), weights };
+  const text = JSON.stringify(payload, null, 2) + "\n";
+  const filename = `gym-report-${todayIso()}.json`;
+  const nav = navigator as Navigator & {
+    share?: (data: ShareData) => Promise<void>;
+    canShare?: (data: ShareData) => boolean;
+  };
+  try {
+    const file = new File([text], filename, { type: "application/json" });
+    if (nav.share && nav.canShare?.({ files: [file] })) {
+      await nav.share({ files: [file], title: filename });
+      return "shared";
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+  }
+  await navigator.clipboard.writeText(text);
+  return "copied";
 }
