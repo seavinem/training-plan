@@ -73,7 +73,14 @@ export type QueueSet = {
 
 export type QueueItem = QueueWarmup | QueueSet;
 
-export type View = "home" | "workout" | "rest" | "summary";
+export type View = "home" | "workout" | "rest" | "summary" | "chat";
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  state?: "sending" | "sent" | "failed";
+};
 
 export type DraftSession = {
   date: string;
@@ -86,12 +93,18 @@ export type DraftSession = {
   phase: "workout" | "rest" | "summary";
   restEndsAt?: number;
   restTotalSec?: number;
+  restDoneIndex?: number;
   confirmedWeights: Weights;
 };
 
-export type GithubSettings = {
-  token: string;
-  owner: string;
-  repo: string;
-  branch: string;
+export type PendingRemote = {
+  program: Program | null;
+  weights: Weights | null;
+};
+
+export type ActiveRun = {
+  agentId: string;
+  runId: string;
+  startedAt: number;
+  baseSha?: string;
 };

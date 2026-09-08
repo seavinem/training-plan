@@ -2,7 +2,7 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_REPORT_TOKEN?: string;
+  readonly VITE_WORKER_URL?: string;
 }
 
 declare module "*.json" {

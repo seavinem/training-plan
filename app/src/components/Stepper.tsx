@@ -11,15 +11,21 @@ type Props = {
 
 export function Stepper({ label, value, step, min = 0, format, onChange }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
+  const inputId = `stepper-${label.replace(/\W+/g, "-").toLowerCase()}`;
 
   return (
     <div>
-      <label>{label}</label>
+      <label htmlFor={inputId}>{label}</label>
       <div className="stepper">
-        <button type="button" onClick={() => onChange(Math.max(min, round(value - step)))}>
+        <button
+          type="button"
+          aria-label="Минус"
+          onClick={() => onChange(Math.max(min, round(value - step)))}
+        >
           −
         </button>
         <input
+          id={inputId}
           className="value"
           inputMode="decimal"
           value={draft ?? format(value)}
@@ -27,13 +33,13 @@ export function Stepper({ label, value, step, min = 0, format, onChange }: Props
           onBlur={() => {
             if (draft !== null) {
               const n = Number(draft.replace(",", "."));
-              if (!Number.isNaN(n)) onChange(Math.max(min, n));
+              if (Number.isFinite(n)) onChange(Math.max(min, n));
             }
             setDraft(null);
           }}
           onChange={(e) => setDraft(e.target.value)}
         />
-        <button type="button" onClick={() => onChange(round(value + step))}>
+        <button type="button" aria-label="Плюс" onClick={() => onChange(round(value + step))}>
           +
         </button>
       </div>

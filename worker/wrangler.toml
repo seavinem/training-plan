@@ -1,0 +1,20 @@
+name = "gym-kiryl"
+main = "src/index.ts"
+compatibility_date = "2026-09-08"
+workers_dev = true
+
+[vars]
+GITHUB_OWNER = "seavinem"
+GITHUB_REPO = "training-plan"
+GITHUB_BRANCH = "master"
+GITHUB_REPO_URL = "https://github.com/seavinem/training-plan"
+
+[[ratelimits]]
+name = "AUTH_LIMITER"
+namespace_id = "1001"
+simple = { limit = 8, period = 60 }
+
+[[ratelimits]]
+name = "WRITE_LIMITER"
+namespace_id = "1002"
+simple = { limit = 20, period = 60 }

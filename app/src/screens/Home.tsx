@@ -15,6 +15,7 @@ type Props = {
   onResume: () => void;
   onDiscard: () => void;
   onSend: () => void;
+  onChat: () => void;
   status?: string;
 };
 
@@ -30,13 +31,16 @@ export function Home({
   onResume,
   onDiscard,
   onSend,
+  onChat,
   status,
 }: Props) {
   return (
     <div className="shell stack">
       <h1>Зал</h1>
       {status ? (
-        <div className={`banner ${/не ушл/i.test(status) ? "err" : "ok"}`}>{status}</div>
+        <div className={`banner ${/не ушл|сервер|ошиб|невер|бит/i.test(status) ? "err" : "ok"}`}>
+          {status}
+        </div>
       ) : null}
 
       <div className="card">
@@ -72,9 +76,13 @@ export function Home({
         </button>
       )}
 
+      <button type="button" className="btn" onClick={onChat}>
+        Чат
+      </button>
+
       {pending > 0 ? (
         <button type="button" className="btn" disabled={busy} onClick={onSend}>
-          {busy ? "Отправляю…" : "Отправить отчёт"}
+          {busy ? "Отправляю…" : "Дослать отчёт"}
         </button>
       ) : null}
 

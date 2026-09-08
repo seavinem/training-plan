@@ -8,7 +8,10 @@ export function suggestWeights(
   const result: Weights = {};
   for (const ex of program.days[day].exercises) {
     const row = logs.find((l) => l.id === ex.id);
-    const working = row?.sets.filter((s) => !s.ramp) ?? [];
+    const working =
+      row?.sets.filter(
+        (s) => !s.ramp && Number.isFinite(s.weightKg) && Number.isFinite(s.reps),
+      ) ?? [];
     if (working.length === 0) continue;
     const lastKg = working[working.length - 1].weightKg;
     const hitTop =

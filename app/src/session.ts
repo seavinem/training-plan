@@ -143,6 +143,9 @@ export function defaultsForSet(
   item: QueueSet,
   logs: ExerciseLog[],
 ): { weightKg: number; reps: number } {
+  if (item.kind === "ramp") {
+    return { weightKg: item.targetWeightKg, reps: item.repsMin };
+  }
   const row = logs.find((e) => e.id === item.exerciseId);
   const prev = row?.sets.filter((s) => Boolean(s.ramp) === (item.kind === "ramp"));
   if (prev && prev.length > 0) {

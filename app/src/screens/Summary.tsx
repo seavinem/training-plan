@@ -5,16 +5,18 @@ import { findExercise } from "../session";
 type Props = {
   draft: DraftSession;
   program: Program;
-  status: string;
+  status?: string;
   busy: boolean;
+  sendState: "idle" | "sending" | "ok" | "failed";
   onSend: () => void;
+  onHome: () => void;
 };
 
-export function Summary({ draft, program, status, busy, onSend }: Props) {
+export function Summary({ draft, program, status, busy, sendState, onSend, onHome }: Props) {
   return (
     <div className="shell stack">
       <h1>День {draft.day}</h1>
-      <p className="muted">Готово. Отправь отчёт — я разберу веса.</p>
+      <p className="muted">Готово. Отчёт уходит сам.</p>
 
       <div className="card">
         {program.days[draft.day].exercises.map((ex) => (
@@ -22,13 +24,18 @@ export function Summary({ draft, program, status, busy, onSend }: Props) {
         ))}
       </div>
 
-      {status ? (
-        <div className={`banner ${/не ушл/i.test(status) ? "err" : "ok"}`}>{status}</div>
+      {status ? <div className="banner err">{status}</div> : sendState === "sending" ? (
+        <div className="banner">Отправляю…</div>
       ) : null}
 
-      <button type="button" className="btn btn-primary" disabled={busy} onClick={onSend}>
-        {busy ? "Отправляю…" : "Отправить отчёт"}
+      <button type="button" className="btn btn-primary" onClick={onHome}>
+        На главную
       </button>
+      {sendState === "failed" ? (
+        <button type="button" className="btn" disabled={busy} onClick={onSend}>
+          Повторить отправку
+        </button>
+      ) : null}
     </div>
   );
 }
