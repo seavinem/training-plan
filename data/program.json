@@ -21,7 +21,7 @@
           "sets": 3,
           "repsMin": 6,
           "repsMax": 8,
-          "weightKg": 65,
+          "weightKg": 60,
           "rir": "2",
           "restSec": 180,
           "incrementKg": 5
@@ -99,7 +99,7 @@
           "sets": 4,
           "repsMin": 8,
           "repsMax": 12,
-          "weightKg": 57.5,
+          "weightKg": 55,
           "rir": "2",
           "restSec": 120,
           "incrementKg": 2.5
@@ -121,7 +121,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 12.5,
+          "weightKg": 10,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
@@ -132,7 +132,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 15,
-          "weightKg": 42.5,
+          "weightKg": 40,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
@@ -143,7 +143,7 @@
           "sets": 3,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 52.5,
+          "weightKg": 50,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
@@ -177,7 +177,7 @@
           "sets": 3,
           "repsMin": 8,
           "repsMax": 10,
-          "weightKg": 47.5,
+          "weightKg": 45,
           "rir": "1–2",
           "restSec": 0,
           "incrementKg": 2.5,
@@ -201,7 +201,7 @@
           "sets": 3,
           "repsMin": 12,
           "repsMax": 15,
-          "weightKg": 42.5,
+          "weightKg": 40,
           "rir": "1–2",
           "restSec": 60,
           "incrementKg": 2.5
@@ -223,7 +223,7 @@
           "sets": 4,
           "repsMin": 10,
           "repsMax": 12,
-          "weightKg": 37.5,
+          "weightKg": 35,
           "rir": "2",
           "restSec": 75,
           "incrementKg": 2.5
