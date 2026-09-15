@@ -11,11 +11,11 @@
   "legExt": 40,
   "pushdownB": 52.5,
   "lateralsB": 10.5,
-  "hammer1": 45,
+  "hammer1": 47.5,
   "hammer2": 35,
-  "pecDeck": 40,
+  "pecDeck": 50,
   "pulldownV": 55,
-  "legCurl": 35,
+  "legCurl": 40,
   "pushdownC": 50,
-  "lateralsC": 5
+  "lateralsC": 6
 }
